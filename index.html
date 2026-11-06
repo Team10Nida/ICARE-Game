@@ -221,7 +221,7 @@ const BOSS_IMG=new Image();BOSS_IMG.src=IMG.boss;
 document.documentElement.style.setProperty("--road",`url(${IMG.road})`);
 const ARTIFACT_URL="https://claude.ai/artifact/MPkj5jmQbUU9we26sqGWPH";
 // Google Apps Script web app (apps-script.gs). Empty = no live scoreboard; the instructor types top scores instead.
-const SCRIPT_URL="";
+const SCRIPT_URL="https://script.google.com/macros/s/AKfycbwCMoRGC4hrhAu2i339jrgt3a9lVfl_JxjiSNX1CYO7mG2Bi3lQsIyT7UxkisvvHtZq/exec";
 // hosted copy (e.g. GitHub Pages) points the QR at itself; inside claude.ai or opened as a local file it uses the artifact link
 const AUTO_URL=/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname)&&!/^(localhost|127\.)/.test(location.hostname)?location.href.split("#")[0]:ARTIFACT_URL;
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
@@ -446,6 +446,7 @@ function float(text){
 /* ---------- drawing ---------- */
 function resize(){
   if(!CV||!CV.isConnected)return;const r=CV.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);
+  if(!r.height)return;  // not laid out yet (hidden tab): keep the last size
   CV.width=Math.round(r.width*d);CV.height=Math.round(r.height*d);SCALE=CV.height/H;W=CV.width/SCALE;
   if(G)draw();
 }
@@ -834,7 +835,9 @@ function liveRank(H,save,head,bindTabs){
   bindTabs();
   let live=null,err="",lastKey="";
   const draw=force=>{
-    const list=(live||[]).filter(r=>r.t>=(H.since||0)&&proof(String(r.name),Number(r.score),Number(r.icare))===String(r.code).toUpperCase());
+    // Sheets turns all-digit codes like "0123" or "1E05" into numbers, so compare those as numbers
+    const codeOk=(p,c)=>{c=String(c).toUpperCase();return p===c||(c!==""&&!isNaN(Number(p))&&Number(p)===Number(c))};
+    const list=(live||[]).filter(r=>r.t>=(H.since||0)&&codeOk(proof(String(r.name),Number(r.score),Number(r.icare)),r.code));
     // each person counts once: their best game
     const best={};
     list.forEach(r=>{const k=String(r.name).trim().toLowerCase(),b=best[k];if(!b||r.score>b.score||(r.score===b.score&&r.icare>b.icare))best[k]=r});
